@@ -146,6 +146,7 @@ include(external/cares)
 include(external/grpc)
 include(external/snappy)    # download snappy
 include(external/snappystream)
+include(external/cpp_redis) # download, build, install cpp_redis
 
 include(cudnn)              # set cudnn libraries, must before configure
 include(cupti)
