@@ -56,5 +56,9 @@ add_library(cpp_redis STATIC IMPORTED GLOBAL)
 set_property(TARGET cpp_redis PROPERTY IMPORTED_LOCATION
         "${CPP_REDIS_INSTALL_DIR}/lib/libcpp_redis.a")
 
+add_library(tacopie STATIC IMPORTED GLOBAL)
+set_property(TARGET tacopie PROPERTY IMPORTED_LOCATION
+        "${CPP_REDIS_INSTALL_DIR}/lib/libtacopie.a")
+
 include_directories(${CPP_REDIS_INCLUDE_DIR})
 add_dependencies(cpp_redis extern_cpp_redis)
