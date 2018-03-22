@@ -14,36 +14,19 @@ limitations under the License. */
 
 #include <gtest/gtest.h>
 #include <cpp_redis/cpp_redis>
-
-template <typename value_type>
-void SerializeToStream(std::ostream& os, const value_type* value, size_t size) {
-  os.write(reinterpret_cast<const char*>(&size), sizeof(size));
-  for (size_t i = 0; i < size; ++i) {
-    os.write(reinterpret_cast<const char*>(&value[i]), sizeof(value_type));
-  }
-}
-
-template <typename value_type>
-void DeserializeFromStream(std::istream& is, value_type* buf, size_t size) {
-  size_t actual_size;
-  is.read(reinterpret_cast<char*>(&actual_size), sizeof(actual_size));
-  assert(actual_size == size);
-  for (size_t i = 0; i < size; ++i) {
-    is.read(reinterpret_cast<char*>(&buf[i]), sizeof(value_type));
-  }
-}
+#include "paddle/fluid/framework/selected_rows.h"
 
 TEST(CppRedis, Serialize) {
   size_t length = 3;
   double a[3] = {1.23456, 2.7891234, 3.16493272};
 
   std::ostringstream oss;
-  SerializeToStream(oss, a, length);
+  paddle::framework::SerializeArrayToStream(oss, a, length);
 
   double b[3];
 
   std::istringstream iss(oss.str());
-  DeserializeFromStream(iss, b, length);
+  paddle::framework::DeserializeArrayFromStream(iss, b, length);
   for (size_t i = 0; i < length; ++i) {
     EXPECT_EQ(b[i], a[i]);
   }
@@ -71,11 +54,11 @@ TEST(CppRedis, PutGet) {
 
   double a[3] = {1.23456, 2.7891234, 3.16493272};
   std::ostringstream oss;
-  SerializeToStream(oss, a, 3);
+  paddle::framework::SerializeArrayToStream(oss, a, 3);
   client.set("a", oss.str(), [](cpp_redis::reply& reply) {});
 
   client.exists({"a"},
-                [](cpp_redis::reply& regply) {
+                [](cpp_redis::reply& reply) {
                   int64_t exist = reply.as_integer();
                   EXPECT_EQ(exist, 1);
                 });
@@ -83,7 +66,7 @@ TEST(CppRedis, PutGet) {
   double b[3];
   client.get("a", [&a, &b](cpp_redis::reply& reply) {
     std::istringstream iss(reply.as_string());
-    DeserializeFromStream(iss, b, 3);
+    paddle::framework::DeserializeArrayFromStream(iss, b, 3);
     for (size_t i = 0; i < 3; ++i) {
       std::cout << b[i] << std::endl;
       EXPECT_EQ(b[i], a[i]);

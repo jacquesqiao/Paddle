@@ -69,5 +69,25 @@ void SerializeToStream(std::ostream& os, const SelectedRows& selected_rows,
 void DeserializeFromStream(std::istream& is, SelectedRows* selected_rows,
                            const platform::DeviceContext& dev_ctx);
 
+template <typename value_type>
+void SerializeArrayToStream(std::ostream& os, const value_type* value,
+                            size_t size) {
+  os.write(reinterpret_cast<const char*>(&size), sizeof(size));
+  for (size_t i = 0; i < size; ++i) {
+    os.write(reinterpret_cast<const char*>(&value[i]), sizeof(value_type));
+  }
+}
+
+template <typename value_type>
+void DeserializeArrayFromStream(std::istream& is, value_type* buf,
+                                size_t size) {
+  size_t actual_size;
+  is.read(reinterpret_cast<char*>(&actual_size), sizeof(actual_size));
+  assert(actual_size == size);
+  for (size_t i = 0; i < size; ++i) {
+    is.read(reinterpret_cast<char*>(&buf[i]), sizeof(value_type));
+  }
+}
+
 }  // namespace framework
 }  // namespace paddle

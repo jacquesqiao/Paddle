@@ -106,4 +106,4 @@ cc_test(concurrency_test SRCS concurrency_test.cc DEPS go_op channel_close_op ch
         channel_send_op channel_recv_op sum_op select_op elementwise_add_op compare_op
         conditional_block_op while_op assign_op print_op executor proto_desc)
 
-cc_test(cpp_redis_test SRCS cpp_redis_test.cc DEPS cpp_redis tacopie)
+cc_test(cpp_redis_test SRCS cpp_redis_test.cc DEPS cpp_redis tacopie selected_rows)
