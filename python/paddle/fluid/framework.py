@@ -47,14 +47,6 @@ GRAD_VAR_SUFFIX = core.kGradVarSuffix()
 ZERO_VAR_SUFFIX = core.kZeroVarSuffix()
 
 
-def _is_inited_by(block, var):
-    init_ops = []
-    for op in block.ops:
-        if var.name in op.output_arg_names:
-            init_ops.append(op)
-    return init_ops
-
-
 def grad_var_name(var_name):
     """
     Returns:
@@ -1046,6 +1038,14 @@ class Block(object):
         global_block = self.program.global_block()
         param = Parameter(global_block, *args, **kwargs)
         if 'initializer' in kwargs:
+
+            def _is_inited_by(block, var):
+                init_ops = []
+                for op in block.ops:
+                    if var.name in op.output_arg_names:
+                        init_ops.append(op)
+                return init_ops
+
             initializer = kwargs['initializer']
             init_ops = _is_inited_by(global_block, param)
             init_ops_len = len(init_ops)
