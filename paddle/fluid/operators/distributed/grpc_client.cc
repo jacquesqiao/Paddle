@@ -383,7 +383,7 @@ std::shared_ptr<grpc::Channel> GRPCClient::GetChannel(const std::string& ep) {
   // Channel configurations:
   grpc::ChannelArguments args;
   args.SetInt(GRPC_ARG_MAX_RECONNECT_BACKOFF_MS, 2000);
-  args.SetCompressionAlgorithm(GRPC_COMPRESS_NONE);
+  args.SetCompressionAlgorithm(GRPC_COMPRESS_GZIP);
   args.SetMaxSendMessageSize(std::numeric_limits<int>::max());
   args.SetMaxReceiveMessageSize(std::numeric_limits<int>::max());
 
