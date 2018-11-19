@@ -14,8 +14,11 @@ limitations under the License. */
 
 #pragma once
 
+#include <vector>
+
 #include "paddle/fluid/framework/eigen.h"
 #include "paddle/fluid/framework/op_registry.h"
+#include "paddle/fluid/framework/threadpool.h"
 #include "paddle/fluid/operators/math/blas.h"
 
 namespace paddle {
@@ -135,38 +138,50 @@ class BilinearTensorProductGradKernel : public framework::OpKernel<T> {
       Eigen::DSizes<int, 2> bcast_for_y(1, x_dim);
       Eigen::DSizes<int, 2> bcast_for_weight(1, x_dim);
 
+      std::mutex d_x_mutex;
+      std::mutex d_y_mutex;
+      std::vector<std::future<void>> workers;
       for (int i = 0; i < out_dim; ++i) {
-        Tensor weight_i = weight->Slice(i, i + 1).Resize(
-            framework::make_ddim({x_dim, y_dim}));
-        auto output_vec = d_out_mat.chip(i, 1);
+        workers.emplace_back(framework::Async([&, i] {
+          Tensor weight_i = weight->Slice(i, i + 1).Resize(
+              framework::make_ddim({x_dim, y_dim}));
+          auto output_vec = d_out_mat.chip(i, 1);
 
-        if (d_x) {
-          y_scale_mat.device(place) =
-              output_vec.reshape(Eigen::DSizes<int, 2>(batch_size, 1))
-                  .broadcast(bcast_for_x)
-                  .eval() *
-              y_mat;
-          blas.GEMM(CblasNoTrans, CblasTrans, batch_size, x_dim, y_dim, 1,
-                    y_scale.data<T>(), weight_i.data<T>(), 1, d_x->data<T>());
-        }
+          if (d_x) {
+            y_scale_mat.device(place) =
+                output_vec.reshape(Eigen::DSizes<int, 2>(batch_size, 1))
+                    .broadcast(bcast_for_x)
+                    .eval() *
+                y_mat;
+            std::lock_guard<std::mutex> guard(d_x_mutex);
+            blas.GEMM(CblasNoTrans, CblasTrans, batch_size, x_dim, y_dim, 1,
+                      y_scale.data<T>(), weight_i.data<T>(), 1, d_x->data<T>());
+          }
 
-        if (d_y || d_weight) {
-          auto output_vec_y =
-              output_vec.reshape(Eigen::DSizes<int, 2>(batch_size, 1))
-                  .broadcast(bcast_for_y)
-                  .eval();
-          x_scale_mat.device(place) = output_vec_y * x_mat;
-          if (d_y) {
-            blas.GEMM(CblasNoTrans, CblasNoTrans, batch_size, y_dim, x_dim, 1,
-                      x_scale.data<T>(), weight_i.data<T>(), 1, d_y->data<T>());
+          if (d_y || d_weight) {
+            auto output_vec_y =
+                output_vec.reshape(Eigen::DSizes<int, 2>(batch_size, 1))
+                    .broadcast(bcast_for_y)
+                    .eval();
+            x_scale_mat.device(place) = output_vec_y * x_mat;
+            if (d_y) {
+              std::lock_guard<std::mutex> guard(d_y_mutex);
+              blas.GEMM(CblasNoTrans, CblasNoTrans, batch_size, y_dim, x_dim, 1,
+                        x_scale.data<T>(), weight_i.data<T>(), 1,
+                        d_y->data<T>());
+            }
+            if (d_weight) {
+              Tensor d_weight_i = d_weight->Slice(i, i + 1).Resize(
+                  framework::make_ddim({x_dim, y_dim}));
+              blas.GEMM(CblasTrans, CblasNoTrans, x_dim, y_dim, batch_size, 1,
+                        x_scale.data<T>(), y->data<T>(), 0,
+                        d_weight_i.data<T>());
+            }
           }
-          if (d_weight) {
-            Tensor d_weight_i = d_weight->Slice(i, i + 1).Resize(
-                framework::make_ddim({x_dim, y_dim}));
-            blas.GEMM(CblasTrans, CblasNoTrans, x_dim, y_dim, batch_size, 1,
-                      x_scale.data<T>(), y->data<T>(), 0, d_weight_i.data<T>());
-          }
-        }
+        }));
+      }
+      for (auto& worker : workers) {
+        worker.wait();
       }
     }
 
