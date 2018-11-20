@@ -102,17 +102,6 @@ class BilinearTensorProductGradKernel : public framework::OpKernel<T> {
     auto d_out_mat = EigenMatrix<T>::From(*d_out);
     auto& place = *ctx.template device_context<DeviceContext>().eigen_device();
     auto& dev_ctx = ctx.template device_context<DeviceContext>();
-    // Create the intermediate variable to calculate the Output(Y@Grad).
-    Tensor x_scale;
-    x_scale.mutable_data<T>(framework::make_ddim({batch_size, x_dim}),
-                            ctx.GetPlace());
-    auto x_scale_mat = EigenMatrix<T>::From(x_scale);
-
-    // Create the intermediate variable to calculate the Output(X@Grad).
-    Tensor y_scale;
-    y_scale.mutable_data<T>(framework::make_ddim({batch_size, y_dim}),
-                            ctx.GetPlace());
-    auto y_scale_mat = EigenMatrix<T>::From(y_scale);
 
     math::SetConstant<DeviceContext, T> set_zero;
 
@@ -148,6 +137,11 @@ class BilinearTensorProductGradKernel : public framework::OpKernel<T> {
           auto output_vec = d_out_mat.chip(i, 1);
 
           if (d_x) {
+            // Create the intermediate variable to calculate the Output(X@Grad).
+            Tensor y_scale;
+            y_scale.mutable_data<T>(framework::make_ddim({batch_size, y_dim}),
+                                    ctx.GetPlace());
+            auto y_scale_mat = EigenMatrix<T>::From(y_scale);
             y_scale_mat.device(place) =
                 output_vec.reshape(Eigen::DSizes<int, 2>(batch_size, 1))
                     .broadcast(bcast_for_x)
@@ -159,6 +153,11 @@ class BilinearTensorProductGradKernel : public framework::OpKernel<T> {
           }
 
           if (d_y || d_weight) {
+            // Create the intermediate variable to calculate the Output(Y@Grad).
+            Tensor x_scale;
+            x_scale.mutable_data<T>(framework::make_ddim({batch_size, x_dim}),
+                                    ctx.GetPlace());
+            auto x_scale_mat = EigenMatrix<T>::From(x_scale);
             auto output_vec_y =
                 output_vec.reshape(Eigen::DSizes<int, 2>(batch_size, 1))
                     .broadcast(bcast_for_y)
