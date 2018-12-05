@@ -20,18 +20,18 @@ Compile time Optimization主要对模型的逻辑结构进行优化，paddle中�
 
 - Op Fusion。随着深度学习模型越来越复杂，模型中的操作粒度越来越小，模型中包含的操作Operator的数量也越来越多，这么多的op会带来额外的调度开销和中间变量内存消耗，而在paddle基于IR-Graph的优化中，有一些优化pass会将常见的一起出现的多个op fuse成一个粒度更大但速度更快更节约内存的节点，而无需用户手动配置。
 
-<div align=center><img src="./op-fuse-pass.jpeg" width="40%" height="40%"></div>
+<div align=center><img src="./op-fuse-pass.png" width="40%" height="40%"></div>
 
   
 - RPC-Fusion。在大规模分布式推荐模型中，一个主要的操作就是embedding，通常会有多个(几十到几百个)输入复用同一个比较大的embedding table，如下图左边所示，在分布式场景下，每个`embedding_lookup`操作都需要发起rpc请求去查询数据对应的参数，假设节点数为N，输入id数为M，那么每个parameter server收到的RPC个数为: `N * M`，会随着输入个数线性增长，每个trainer也需要调用M次`lookup_table_op`，对速度和性能都会有影响，通过`id-merge pass`将多个查表操作合并成一个，那么每个server收到的请求变成M，每个trainer也只需调用1次`lookup_table_op`即可，可以大大提高执行效率和通信效率。
  
-  <div align=center><img src="./id-merge-pass.jpeg" width="100%" height="100%"></div>
+  <div align=center><img src="./id-merge-pass.png" width="100%" height="100%"></div>
 
  - In-Graph distribute traininig。worker和pserver之间同构，复用同样的基础设施(Operator/Optimizer/Regularizer/Executor)，这样能够保证单机和分布式逻辑保持一致，用户单机训练的模型能够无缝迁移到分布式环境中训练。
  
  同步训练架构图:
  
- <div align=center><img src="./sync-train-graph.jpeg" width="60%" height="60%"></div>
+ <div align=center><img src="./sync-train-graph.png" width="60%" height="60%"></div>
  
 
 
