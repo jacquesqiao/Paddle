@@ -354,8 +354,7 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
 
  protected:
   mkldnn_memory_desc_t Axis2MemoryDesc(std::vector<int>& nchw_tz,  // NOLINT
-                                       std::vector<int>& axis      // NOLINT
-                                       ) {
+                                       std::vector<int>& axis) {   // NOLINT
     mkldnn_memory_desc_t mem_fmt;
 
     mem_fmt.primitive_kind = mkldnn_memory;

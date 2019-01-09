@@ -1545,8 +1545,9 @@ class Program(object):
         # for distribute
         self._is_distributed = False
         self._is_chief = False
-        self._slice_vars_and_attrs = []
+        self._slice_vars_overview = None
         self._endpoints = []
+        self._ps_endpoint = None
         self._trainers_endpoints = []
         self._distributed_lookup_table = None
 
@@ -2061,8 +2062,9 @@ class Program(object):
                             "Program")
         self._is_distributed = other._is_distributed
         self._is_chief = other._is_chief
-        self._slice_vars_and_attrs = other._slice_vars_and_attrs
+        self._slice_vars_overview = other._slice_vars_overview
         self._endpoints = other._endpoints
+        self._ps_endpoint = other._ps_endpoint
         self._distributed_lookup_table = other._distributed_lookup_table
 
     def _copy_data_info_from(self, other):
